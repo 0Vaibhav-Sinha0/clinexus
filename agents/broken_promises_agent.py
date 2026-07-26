@@ -7,7 +7,7 @@
 
 import json
 import re
-from langchain_openai import ChatOpenAI
+from langchain_groq import ChatGroq
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 
 from graph.state import MosaicState, SignalOutput
@@ -42,10 +42,10 @@ AGENT_TOOLS = [
 _procedural = ProceduralStore()
 _episodic   = EpisodicStore()
 
-_llm = ChatOpenAI(
-    model=settings.openai_chat_model,
+_llm = ChatGroq(
+    model=settings.groq_model,
     temperature=0.1,
-    api_key=settings.openai_api_key,
+    api_key=settings.groq_api_key,
 ).bind_tools(AGENT_TOOLS)
 
 

@@ -6,7 +6,7 @@
 ##############################################################################
 
 import json
-from langchain_openai import ChatOpenAI
+from langchain_groq import ChatGroq
 from langchain_core.messages import SystemMessage, HumanMessage
 
 from graph.state import MosaicState
@@ -49,10 +49,10 @@ in future analyses.
     else:
         signals_text = _format_signals_for_brief(signals)
 
-        llm = ChatOpenAI(
-            model=settings.openai_chat_model,
+        llm = ChatGroq(
+            model=settings.groq_model,
             temperature=0.1,
-            api_key=settings.openai_api_key,
+            api_key=settings.groq_api_key,
         )
 
         system_prompt = """You are the compilation agent for Clinexus.

@@ -2,7 +2,8 @@
 # processing/run_processing.py
 #
 # Main entry point for the processing pipeline. Reads cleaned studies from
-# GCS, chunks them, embeds them via OpenAI, and stores everything in Cloud SQL.
+# GCS, chunks them, embeds them via SentenceTransformers (local, free),
+# and stores everything in Cloud SQL.
 #
 # Run from terminal:
 #   python3 processing/run_processing.py
@@ -26,7 +27,7 @@ async def run_processing():
     Runs the complete processing pipeline from start to finish.
 
     Reads cleaned studies from GCS, chunks them, embeds them via
-    OpenAI, and stores everything in Cloud SQL for agent search.
+    SentenceTransformers (local, free), and stores everything in Cloud SQL for agent search.
     """
 
     gcs_store = GCSStore()
@@ -88,7 +89,7 @@ async def run_processing():
         logger.info(f"Total chunks created: {len(all_chunks)}")
 
         # ── STEP 4: EMBED ALL CHUNKS ───────────────────────────
-        logger.info("Embedding chunks via OpenAI...")
+        logger.info("Embedding chunks via SentenceTransformers (local, free)...")
 
         embedded_chunks = await embedder.embed_chunks(all_chunks)
         logger.info(f"Total chunks embedded: {len(embedded_chunks)}")

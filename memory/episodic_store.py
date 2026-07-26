@@ -9,15 +9,29 @@
 
 import json
 import uuid
+import asyncio
 from datetime import datetime
 
-from openai import AsyncOpenAI
+from sentence_transformers import SentenceTransformer
 import asyncpg
 
 from config.settings import settings
 from config.logging_config import setup_logging
 
 logger = setup_logging(__name__)
+
+
+# Global model instance (lazy-loaded)
+_model_instance: SentenceTransformer | None = None
+
+
+def _get_model() -> SentenceTransformer:
+    """Lazy-loads the SentenceTransformer model."""
+    global _model_instance
+    if _model_instance is None:
+        logger.info(f"Loading embedding model for EpisodicStore: {settings.embedding_model}")
+        _model_instance = SentenceTransformer(settings.embedding_model)
+    return _model_instance
 
 
 class EpisodicStore:
@@ -27,6 +41,8 @@ class EpisodicStore:
     Each episode is one agent's reasoning session — what it investigated,
     what it found, and what it concluded. Episodes are embedded and stored
     so future sessions can search through past findings by meaning.
+
+    Uses SentenceTransformers for FREE local embeddings (no OpenAI API costs).
 
     Usage:
         store = EpisodicStore()
@@ -47,10 +63,14 @@ class EpisodicStore:
 
     def __init__(self):
         self._pool: asyncpg.Pool | None = None
-        self._openai = AsyncOpenAI(api_key=settings.openai_api_key)
-        self._embedding_model = settings.openai_embedding_model
+        self._model = _get_model()
+        self._embedding_dim = settings.embedding_dimension
 
-        logger.info("EpisodicStore initialised")
+        logger.info(
+            f"EpisodicStore initialised | "
+            f"model={settings.embedding_model} | "
+            f"dimension={self._embedding_dim}"
+        )
 
     # ──────────────────────────────────────────────────────────
     # PRIVATE HELPER: _ensure_pool
@@ -324,21 +344,23 @@ class EpisodicStore:
 
     async def _embed_text(self, text: str) -> list[float]:
         """
-        Converts text to a 1536-number vector embedding via OpenAI.
+        Converts text to a vector embedding using SentenceTransformers (local, free).
 
         Args:
             text: The text to embed.
 
         Returns:
-            List of 1536 floating point numbers.
+            List of floats (dimension = settings.embedding_dimension, default 768).
         """
 
-        response = await self._openai.embeddings.create(
-            model=self._embedding_model,
-            input=text,
+        # Run in thread pool to avoid blocking event loop
+        loop = asyncio.get_event_loop()
+        embedding = await loop.run_in_executor(
+            None,
+            lambda: self._model.encode(text, convert_to_tensor=False),
         )
 
-        return response.data[0].embedding
+        return embedding.tolist()  # Convert numpy array to list
 
     # ──────────────────────────────────────────────────────────
     # CLEANUP METHOD: close

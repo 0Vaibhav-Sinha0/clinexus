@@ -12,12 +12,12 @@ class Settings(BaseSettings):
     )
 
     # ==========================================================
-    # GROQ
+    # GROQ (FREE LLM)
     # ==========================================================
 
     groq_api_key: str = Field(
         ...,
-        description="Groq API Key"
+        description="Groq API Key (get free key at https://console.groq.com)"
     )
 
     groq_model: str = Field(
@@ -26,17 +26,17 @@ class Settings(BaseSettings):
     )
 
     # ==========================================================
-    # EMBEDDINGS
+    # EMBEDDINGS (LOCAL, FREE)
     # ==========================================================
 
-    embedding_provider: str = Field(
-        default="vertex_ai",
-        description="Embedding provider"
+    embedding_model: str = Field(
+        default="all-mpnet-base-v2",
+        description="SentenceTransformers embedding model (local, free)"
     )
 
-    embedding_model: str = Field(
-        default="text-embedding-005",
-        description="Embedding model"
+    embedding_dimension: int = Field(
+        default=768,
+        description="Embedding vector dimension"
     )
 
     # ==========================================================

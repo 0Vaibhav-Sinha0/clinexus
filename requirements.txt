@@ -6,10 +6,9 @@ uvicorn[standard]
 httpx
 langgraph
 langchain
-langchain-openai
+langchain-groq
 langchain-community
 langmem
-openai
 google-cloud-storage
 google-cloud-secret-manager
 asyncpg
@@ -23,3 +22,5 @@ httpx
 python-multipart
 tenacity
 structlog
+sentence-transformers
+torch
