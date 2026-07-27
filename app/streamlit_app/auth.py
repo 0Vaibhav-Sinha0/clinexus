@@ -124,11 +124,9 @@ def require_permission(permission: str):
 
 def render_login_page():
     """Render login page."""
-    st.set_page_config(
-        page_title="Clinexus - Login",
-        page_icon="🔬",
-        layout="centered",
-    )
+    # Note: st.set_page_config() is called once in app.py
+    # Calling it here would cause: "StreamlitAPIException: set_page_config() can only be called once per app page"
+    # So we render the login form with the main page config instead.
 
     # Centering container
     col1, col2, col3 = st.columns([1, 2, 1])
