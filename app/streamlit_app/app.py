@@ -16,7 +16,6 @@ from auth import (
     get_current_user_email,
     get_current_user_role,
     logout,
-    render_login_page,
     require_role,
 )
 
@@ -173,7 +172,13 @@ def render_main_app():
 # ─────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
-    if is_authenticated():
-        render_main_app()
-    else:
-        render_login_page()
+    # Auto-authenticate as Admin (skip login page)
+    # In production, use OAuth2 or SSO for proper auth
+    if not is_authenticated():
+        # Set default admin user
+        st.session_state.user_id = "admin@clinexus.local"
+        st.session_state.email = "admin@clinexus.local"
+        st.session_state.role = UserRole.ADMIN
+        st.session_state.is_authenticated = True
+    
+    render_main_app()
