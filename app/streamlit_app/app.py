@@ -17,6 +17,7 @@ from auth import (
     get_current_user_role,
     logout,
     render_login_page,
+    require_role,
 )
 
 # ─────────────────────────────────────────────────────────────
@@ -42,48 +43,60 @@ init_session_state()
 def render_main_app():
     """Render authenticated main application."""
     
-    # Header with user info
+    # Header with user info and logout
     col1, col2, col3 = st.columns([3, 2, 1])
     with col1:
         st.markdown("# 🔬 **Clinexus**")
+        st.markdown("*Clinical Trial Intelligence Platform*")
     with col3:
         email = get_current_user_email()
         role = get_current_user_role()
-        st.markdown(f"**{email}** | {role.value.title()}")
-        if st.button("🚪 Logout", key="logout_btn"):
+        st.markdown(f"**{email}**")
+        st.markdown(f"*{role.value.title()}*")
+        if st.button("🚪 Logout", key="logout_btn", use_container_width=True):
             logout()
             st.rerun()
 
     st.markdown("---")
 
-    # Sidebar navigation with role-based menu
+    # Sidebar navigation with role-based menu (REDESIGNED)
     with st.sidebar:
-        st.markdown("# Navigation")
+        st.markdown("## 📋 Navigation")
+        st.markdown("*Role-based access*")
+        st.markdown("")
         
-        # Build menu items based on role
+        # Get current role
         role = get_current_user_role()
         
+        # Build menu items based on role and data source clarity
         menu_items = [
-            ("🏠 Home", "home"),
+            ("🏠 Home", "home", "Dashboard & metrics"),
         ]
 
+        # ADMIN ONLY: Data Management (NEW)
+        if role == UserRole.ADMIN:
+            menu_items.append(("🔬 Data Management", "data_management", "Ingestion & processing"))
+
+        # ADMIN & RESEARCHER: Run Analysis (RENAMED from Upload & Analyze)
         if role in [UserRole.RESEARCHER, UserRole.ADMIN]:
-            menu_items.append(("📤 Upload & Analyze", "upload_analyze"))
+            menu_items.append(("📊 Run Analysis", "run_analysis", "Select trials & analyze"))
 
+        # ADMIN & REVIEWER: Signal Review
         if role in [UserRole.REVIEWER, UserRole.ADMIN]:
-            menu_items.append(("🔍 Signal Review", "signal_review"))
+            menu_items.append(("🔍 Signal Review", "signal_review", "HITL approval gate"))
 
+        # ALL USERS: Analytics, Search, Sponsor Intelligence
         menu_items.extend([
-            ("📊 Analytics", "analytics"),
-            ("🏢 Sponsor Profiles", "sponsor_profiles"),
-            ("🔎 Search", "search"),
-            ("📋 Analysis History", "analysis_history"),
+            ("📈 Analytics", "analytics", "Metrics & trends"),
+            ("🏢 Sponsor Intelligence", "sponsor_profiles", "Risk profiles"),
+            ("🔎 Search & Explore", "search", "Trial discovery"),
         ])
 
+        # ADMIN ONLY: Settings
         if role == UserRole.ADMIN:
-            menu_items.append(("⚙️ Settings", "settings"))
+            menu_items.append(("⚙️ Settings", "settings", "System config"))
 
-        # Render option menu
+        # Render option menu with descriptions
         selected = option_menu(
             menu_primary="Menu",
             options=[item[0] for item in menu_items],
@@ -93,6 +106,15 @@ def render_main_app():
             key="main_menu",
         )
 
+        # Show description of selected page
+        st.markdown("---")
+        description = next(
+            (item[2] for item in menu_items if item[0] == selected),
+            ""
+        )
+        if description:
+            st.caption(f"📝 {description}")
+
         # Map selected menu item to page key
         page_key = next(
             (item[1] for item in menu_items if item[0] == selected),
@@ -100,18 +122,28 @@ def render_main_app():
         )
 
     # ─────────────────────────────────────────────────────────
-    # PAGE ROUTING
+    # PAGE ROUTING (REDESIGNED)
     # ─────────────────────────────────────────────────────────
 
     if page_key == "home":
         from pages.home import render_home
         render_home()
 
-    elif page_key == "upload_analyze":
-        from pages.upload_analyze import render_upload_analyze
-        render_upload_analyze()
+    elif page_key == "data_management":
+        # NEW PAGE: Data management (admin only)
+        require_role(UserRole.ADMIN)
+        from pages.data_management import render_data_management
+        render_data_management()
+
+    elif page_key == "run_analysis":
+        # RENAMED from "upload_analyze" - Select trials to analyze
+        require_role(UserRole.ADMIN, UserRole.RESEARCHER)
+        from pages.run_analysis import render_run_analysis
+        render_run_analysis()
 
     elif page_key == "signal_review":
+        # HITL gate - Approve/reject signals
+        require_role(UserRole.ADMIN, UserRole.REVIEWER)
         from pages.signal_review import render_signal_review
         render_signal_review()
 
@@ -127,11 +159,9 @@ def render_main_app():
         from pages.search import render_search
         render_search()
 
-    elif page_key == "analysis_history":
-        from pages.analysis_history import render_analysis_history
-        render_analysis_history()
-
     elif page_key == "settings":
+        # Admin only
+        require_role(UserRole.ADMIN)
         from pages.settings import render_settings
         render_settings()
 

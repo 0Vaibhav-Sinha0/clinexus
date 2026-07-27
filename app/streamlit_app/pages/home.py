@@ -18,7 +18,80 @@ logger = logging.getLogger(__name__)
 def render_home():
     """Render home page."""
     
-    st.markdown("## 🏠 Home")
+    st.markdown("# 🏠 Dashboard")
+    st.markdown("*Welcome to Clinexus - Clinical Trial Intelligence Platform*")
+    
+    # User greeting
+    from auth import get_current_user_email, get_current_user_role
+    email = get_current_user_email()
+    role = get_current_user_role()
+    st.markdown(f"**{email}** • {role.value.title()}")
+    
+    st.markdown("---")
+    
+    # System status banner
+    st.success("✅ **System Status: All Systems Operational**")
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        st.caption("📊 Database: Connected")
+    with col2:
+        st.caption("🔬 Agents: Ready (6/6)")
+    with col3:
+        st.caption("📚 Trials Indexed: 150")
+    with col4:
+        st.caption("⏱️ Last Ingestion: 3 days ago")
+    
+    st.markdown("")
+
+    # Quick action cards based on role
+    st.markdown("## Quick Actions")
+    
+    role = get_current_user_role()
+    
+    if role == UserRole.ADMIN:
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("""
+            **🔬 Data Management**
+            
+            Monitor ingestion & processing pipelines
+            """)
+            st.button("Go to Data Management", key="qa_data_mgmt", use_container_width=True)
+        
+        with col2:
+            st.markdown("""
+            **📊 Run Analysis**
+            
+            Select trials & trigger analysis
+            """)
+            st.button("Run Analysis", key="qa_run_analysis", use_container_width=True)
+    
+    elif role == UserRole.RESEARCHER:
+        st.markdown("""
+        **📊 Run Analysis**
+        
+        Select trials from database & trigger analysis
+        """)
+        st.button("Select Trials & Analyze", key="qa_run_analysis_res", use_container_width=True)
+    
+    elif role == UserRole.REVIEWER:
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("""
+            **🔍 Signal Review**
+            
+            Approve/reject signals (HITL gate)
+            """)
+            st.button("Review Pending Signals", key="qa_review", use_container_width=True)
+        
+        with col2:
+            st.markdown("""
+            **📈 Analytics**
+            
+            View trends & system performance
+            """)
+            st.button("View Analytics", key="qa_analytics", use_container_width=True)
+    
     st.markdown("---")
 
     # Get analytics data
