@@ -120,6 +120,89 @@ class ProceduralStore:
         pass
 
     # ──────────────────────────────────────────────────────────
+    # INITIALIZATION METHOD: initialise_defaults
+    # ──────────────────────────────────────────────────────────
+
+    async def initialise_defaults(self) -> None:
+        """
+        Initializes the procedures table on startup and ensures
+        the DEFAULT_RULES are available in the database.
+
+        This method is idempotent — safe to call multiple times.
+        It creates the procedures table if it doesn't exist, then
+        ensures all DEFAULT_RULES are seeded into the database.
+
+        Called by the FastAPI lifespan startup hook in api/main.py.
+
+        Raises:
+            Exception: If database operations fail.
+        """
+
+        await self._ensure_pool()
+
+        async with self._pool.acquire() as conn:
+            # Step 1: Create procedures table if it doesn't exist
+            await conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS procedures (
+                    procedure_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                    agent_name VARCHAR(100) NOT NULL,
+                    rule_text TEXT NOT NULL,
+                    rule_type VARCHAR(50) NOT NULL, -- 'default' or 'learned'
+                    source VARCHAR(100), -- e.g., 'hitl_rejection', 'seed'
+                    created_at TIMESTAMP DEFAULT NOW(),
+                    updated_at TIMESTAMP DEFAULT NOW()
+                )
+                """
+            )
+
+            # Step 2: For each agent, check if defaults are already seeded
+            for agent_name, rules in DEFAULT_RULES.items():
+                # Check if this agent's default rules already exist
+                existing_count = await conn.fetchval(
+                    """
+                    SELECT COUNT(*)
+                    FROM procedures
+                    WHERE agent_name = $1 AND rule_type = $2
+                    """,
+                    agent_name,
+                    "default",
+                )
+
+                # Step 3: Only seed if defaults don't exist yet (idempotent)
+                if existing_count == 0:
+                    for rule_text in rules:
+                        await conn.execute(
+                            """
+                            INSERT INTO procedures (
+                                agent_name,
+                                rule_text,
+                                rule_type,
+                                source
+                            )
+                            VALUES ($1, $2, $3, $4)
+                            """,
+                            agent_name,
+                            rule_text,
+                            "default",
+                            "seed",
+                        )
+
+                    logger.info(
+                        f"Default procedures seeded | "
+                        f"agent={agent_name} | "
+                        f"rules={len(rules)}"
+                    )
+                else:
+                    logger.info(
+                        f"Default procedures already exist | "
+                        f"agent={agent_name} | "
+                        f"existing={existing_count}"
+                    )
+
+        logger.info("Procedures table initialisation complete")
+
+    # ──────────────────────────────────────────────────────────
     # CORE METHOD: get_procedures
     # ──────────────────────────────────────────────────────────
 
